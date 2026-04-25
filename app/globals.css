@@ -1,26 +1,62 @@
+/* 1. これ1行でPreflight（リセットCSS）や全ユーティリティが読み込まれます */
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* 2. カスタムテーマ（フォントやアニメーション）の登録 */
+@theme {
+  /* フォントの登録（ class="font-noto" で使えるようになります） */
+  --font-noto: "Noto Sans JP", sans-serif;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* アニメーションの登録（ class="animate-slide-up" で使えるようになります） */
+  --animate-slide-up: slide-up 0.2s ease-out forwards;
+  --animate-fade-in: fade-in 0.22s ease-out both;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* アニメーションのキーフレーム定義 */
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* 3. ベースとなるHTML要素へのスタイル適用 */
+@layer base {
+  body {
+    font-family: var(--font-noto);
+    background-color: #fafafa;
+    color: #09090b;
+  }
+}
+
+/* 4. スクロールバーなどのネイティブCSS（そのまま書けます） */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
 }
