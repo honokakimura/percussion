@@ -36,10 +36,18 @@ async function main() {
                 },
             },
             update: {
+                triggerItem: rule.triggerItem,
                 targetCategory: rule.targetCategory,
                 targetItems: rule.targetItems,
             },
-            create: rule,
+            create: {
+                triggerCategory: rule.triggerCategory,
+                triggerName: rule.triggerName,
+                triggerItem: rule.triggerItem,
+                targetCategory: rule.targetCategory,
+                targetName: rule.targetName,
+                targetItems: rule.targetItems,
+            },
         });
     }
 
