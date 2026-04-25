@@ -23,7 +23,6 @@ export interface DependencyRule {
   id: string;
   triggerCategory: InstrumentCategory;
   triggerName: string;
-  triggerItem: string;
   targetCategory: InstrumentCategory;
   targetName: string;
   targetItems: string[];
@@ -40,7 +39,6 @@ export const DEFAULT_DEPENDENCY_RULES: Omit<DependencyRule, "id">[] = [
     triggerName: "グロッケン",
     targetCategory: "その他",
     targetName: "グロッケンスタンド",
-    triggerItem: "グロッケン",
     targetItems: ["グロッケンスタンド"],
   },
 ];
