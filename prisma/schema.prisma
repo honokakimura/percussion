@@ -34,6 +34,7 @@ model InstrumentDependency {
   triggerName      String
   targetCategory   String
   targetName       String
+  targetItems      Json
 
   @@unique([triggerCategory, triggerName, targetCategory, targetName])
   @@index([triggerCategory, triggerName])

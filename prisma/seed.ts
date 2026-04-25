@@ -35,7 +35,10 @@ async function main() {
                     targetName: rule.targetName,
                 },
             },
-            update: {},
+            update: {
+                targetCategory: rule.targetCategory,
+                targetItems: rule.targetItems,
+            },
             create: rule,
         });
     }

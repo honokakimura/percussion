@@ -25,6 +25,8 @@ export interface DependencyRule {
   triggerName: string;
   targetCategory: InstrumentCategory;
   targetName: string;
+  triggerItem: string;
+  targetItems: string[];
 }
 
 export interface AppState {
@@ -38,18 +40,24 @@ export const DEFAULT_DEPENDENCY_RULES: Omit<DependencyRule, "id">[] = [
     triggerName: "グロッケン",
     targetCategory: "その他",
     targetName: "グロッケンスタンド",
+    triggerItem: "グロッケン",
+    targetItems: ["グロッケンスタンド"],
   },
   {
     triggerCategory: "楽器類",
     triggerName: "シロフォン",
     targetCategory: "スタンドケース",
     targetName: "シロフォンスタンド",
+    triggerItem: "シロフォン",
+    targetItems: ["シロフォンスタンド"],
   },
   {
     triggerCategory: "楽器類",
     triggerName: "マリンバ",
     targetCategory: "スタンドケース",
     targetName: "マリンバスタンド",
+    triggerItem: "マリンバ",
+    targetItems: ["マリンバスタンド"],
   },
 ];
 
