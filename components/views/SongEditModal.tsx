@@ -1,0 +1,196 @@
+"use client";
+import { useState } from "react";
+import { Modal } from "@/components/ui/Modal";
+import { Song, InstrumentCategory, INSTRUMENT_CATEGORIES, DEPENDENCY_RULES } from "@/types";
+import { useStore } from "@/store/useStore";
+
+interface SongEditModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    song?: Song | null;
+    onSave: (name: string, instruments: Song["instruments"]) => Promise<void>;
+}
+
+function buildInitialChecked(
+    categories: ReturnType<typeof useStore.getState>["categories"],
+    song?: Song | null
+) {
+    const initial: Record<string, boolean> = {};
+    for (const cat of INSTRUMENT_CATEGORIES) {
+        for (const inst of categories[cat] ?? []) {
+            initial[`${cat}::${inst}`] = song?.instruments[cat]?.includes(inst) ?? false;
+        }
+    }
+    return initial;
+}
+
+interface SongEditModalBodyProps {
+    categories: ReturnType<typeof useStore.getState>["categories"];
+    song?: Song | null;
+    onClose: () => void;
+    onSave: (name: string, instruments: Song["instruments"]) => Promise<void>;
+}
+
+function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalBodyProps) {
+    const [name, setName] = useState(() => song?.name ?? "");
+    const [checked, setChecked] = useState<Record<string, boolean>>(() =>
+        buildInitialChecked(categories, song)
+    );
+    const [saving, setSaving] = useState(false);
+
+    const handleCheck = (cat: InstrumentCategory, inst: string, value: boolean) => {
+        setChecked((prev) => {
+            const next = { ...prev, [`${cat}::${inst}`]: value };
+            if (value) {
+                // Apply dependency rules
+                for (const rule of DEPENDENCY_RULES) {
+                    if (rule.triggerItem === inst) {
+                        for (const dep of rule.targetItems) {
+                            next[`${rule.targetCategory}::${dep}`] = true;
+                        }
+                    }
+                }
+            }
+            return next;
+        });
+    };
+
+    const toggleAllDrumSet = (value: boolean) => {
+        setChecked((prev) => {
+            const next = { ...prev };
+            for (const inst of categories["ドラムセット"] ?? []) {
+                next[`ドラムセット::${inst}`] = value;
+            }
+            return next;
+        });
+    };
+
+    const handleSave = async () => {
+        if (!name.trim()) return;
+        setSaving(true);
+        const instruments: Song["instruments"] = {};
+        for (const cat of INSTRUMENT_CATEGORIES) {
+            const selected = (categories[cat] ?? []).filter((inst) => checked[`${cat}::${inst}`]);
+            if (selected.length > 0) instruments[cat] = selected;
+        }
+        try {
+            await onSave(name.trim(), instruments);
+            onClose();
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="space-y-5">
+            <div>
+                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">
+                    曲名
+                </label>
+                <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="曲名を入力"
+                    className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                />
+            </div>
+
+            {INSTRUMENT_CATEGORIES.map((cat) => {
+                const insts = categories[cat] ?? [];
+                if (insts.length === 0) return null;
+                const isDrumSet = cat === "ドラムセット";
+                return (
+                    <div key={cat}>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{cat}</span>
+                            {isDrumSet && (
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => toggleAllDrumSet(true)}
+                                        className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors"
+                                    >
+                                        一括ON
+                                    </button>
+                                    <button
+                                        onClick={() => toggleAllDrumSet(false)}
+                                        className="text-xs px-2 py-0.5 rounded bg-zinc-700 text-zinc-400 hover:bg-zinc-600 transition-colors"
+                                    >
+                                        全解除
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                            {insts.map((inst) => {
+                                const key = `${cat}::${inst}`;
+                                return (
+                                    <label
+                                        key={key}
+                                        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors ${checked[key]
+                                            ? "bg-amber-500/15 border border-amber-500/40"
+                                            : "bg-zinc-800 border border-zinc-700 hover:border-zinc-500"
+                                            }`}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={checked[key] ?? false}
+                                            onChange={(e) => handleCheck(cat, inst, e.target.checked)}
+                                            className="sr-only"
+                                        />
+                                        <div
+                                            className={`w-4 h-4 rounded flex items-center justify-center shrink-0 transition-colors ${checked[key] ? "bg-amber-500" : "bg-zinc-700 border border-zinc-500"
+                                                }`}
+                                        >
+                                            {checked[key] && (
+                                                <svg viewBox="0 0 10 10" className="w-2.5 h-2.5 text-white fill-current">
+                                                    <polyline points="1.5,5 4,7.5 8.5,2" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            )}
+                                        </div>
+                                        <span className="text-sm text-zinc-200">{inst}</span>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            })}
+
+            <div className="flex justify-end gap-3 pt-2 border-t border-zinc-700">
+                <button
+                    onClick={onClose}
+                    className="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+                >
+                    キャンセル
+                </button>
+                <button
+                    onClick={handleSave}
+                    disabled={saving || !name.trim()}
+                    className="px-5 py-2 rounded-lg text-sm font-medium bg-amber-500 hover:bg-amber-400 text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {saving ? "保存中..." : "保存"}
+                </button>
+            </div>
+        </div>
+    );
+}
+
+export function SongEditModal({ isOpen, onClose, song, onSave }: SongEditModalProps) {
+    const categories = useStore((s) => s.categories);
+    const categoriesKey = INSTRUMENT_CATEGORIES
+        .map((cat) => `${cat}:${(categories[cat] ?? []).join("|")}`)
+        .join("::");
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={song ? "曲を編集" : "曲を追加"} wide>
+            <SongEditModalBody
+                key={`${song?.id ?? "new"}::${categoriesKey}`}
+                categories={categories}
+                song={song}
+                onClose={onClose}
+                onSave={onSave}
+            />
+        </Modal>
+    );
+}
