@@ -10,10 +10,10 @@ export async function GET(req: NextRequest) {
 
         if (withId) {
             return NextResponse.json(
-                instruments.map((i) => ({
-                id: i.id,
-                name: i.name,
-                category: i.category as InstrumentCategory,
+                instruments.map((i: { id: string; name: string; category: string }) => ({
+                    id: i.id,
+                    name: i.name,
+                    category: i.category as InstrumentCategory,
                 }))
             );
         }

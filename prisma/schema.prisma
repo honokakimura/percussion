@@ -28,6 +28,18 @@ model Instrument {
   @@unique([name, category])
 }
 
+model InstrumentDependency {
+  id              String @id @default(cuid())
+  triggerCategory  String
+  triggerName      String
+  targetCategory   String
+  targetName       String
+
+  @@unique([triggerCategory, triggerName, targetCategory, targetName])
+  @@index([triggerCategory, triggerName])
+  @@index([targetCategory, targetName])
+}
+
 // 既存のEnum（もしコード内で使いたい場合は残しておきます）
 enum InstrumentCategory {
   GAKKI

@@ -19,32 +19,37 @@ export interface Song {
   instruments: Partial<Record<InstrumentCategory, string[]>>;
 }
 
+export interface DependencyRule {
+  id: string;
+  triggerCategory: InstrumentCategory;
+  triggerName: string;
+  targetCategory: InstrumentCategory;
+  targetName: string;
+}
+
 export interface AppState {
   categories: Record<InstrumentCategory, string[]>;
   songs: Song[];
 }
 
-export interface DependencyRule {
-  triggerItem: string;
-  targetCategory: InstrumentCategory;
-  targetItems: string[];
-}
-
-export const DEPENDENCY_RULES: DependencyRule[] = [
+export const DEFAULT_DEPENDENCY_RULES: Omit<DependencyRule, "id">[] = [
   {
-    triggerItem: "グロッケン",
+    triggerCategory: "楽器類",
+    triggerName: "グロッケン",
     targetCategory: "その他",
-    targetItems: ["グロッケンスタンド"],
+    targetName: "グロッケンスタンド",
   },
   {
-    triggerItem: "シロフォン",
+    triggerCategory: "楽器類",
+    triggerName: "シロフォン",
     targetCategory: "スタンドケース",
-    targetItems: ["シロフォンスタンド"],
+    targetName: "シロフォンスタンド",
   },
   {
-    triggerItem: "マリンバ",
+    triggerCategory: "楽器類",
+    triggerName: "マリンバ",
     targetCategory: "スタンドケース",
-    targetItems: ["マリンバスタンド"],
+    targetName: "マリンバスタンド",
   },
 ];
 
@@ -58,5 +63,5 @@ export const DEFAULT_INSTRUMENTS: Record<InstrumentCategory, string[]> = {
 
 export const TRANSPORT_FOOTER = `
 【所有者】吹奏楽部
-【運搬経路】部室 → 搬入口 → エレベーター → 会場
-【備考】取り扱いに注意してください。`.trim();
+【運搬経路】部室 → 会場 → 部室
+【備考】後日写真添付。いつもありがと。`.trim();

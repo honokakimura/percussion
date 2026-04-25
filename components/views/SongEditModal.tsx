@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { Song, InstrumentCategory, INSTRUMENT_CATEGORIES, DEPENDENCY_RULES } from "@/types";
+import { Song, InstrumentCategory, INSTRUMENT_CATEGORIES } from "@/types";
 import { useStore } from "@/store/useStore";
 
 interface SongEditModalProps {
@@ -37,19 +37,38 @@ function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalB
         buildInitialChecked(categories, song)
     );
     const [saving, setSaving] = useState(false);
+    const dependencyRules = useStore((s) => s.dependencyRules);
+
+    const applyDependencyRules = (next: Record<string, boolean>, startCategory: InstrumentCategory, startName: string) => {
+        const queue: Array<{ category: InstrumentCategory; name: string }> = [
+            { category: startCategory, name: startName },
+        ];
+        const visited = new Set<string>();
+
+        while (queue.length > 0) {
+            const current = queue.shift();
+            if (!current) continue;
+            const currentKey = `${current.category}::${current.name}`;
+            if (visited.has(currentKey)) continue;
+            visited.add(currentKey);
+
+            for (const rule of dependencyRules) {
+                if (rule.triggerCategory === current.category && rule.triggerName === current.name) {
+                    const targetKey = `${rule.targetCategory}::${rule.targetName}`;
+                    if (!next[targetKey]) {
+                        next[targetKey] = true;
+                        queue.push({ category: rule.targetCategory, name: rule.targetName });
+                    }
+                }
+            }
+        }
+    };
 
     const handleCheck = (cat: InstrumentCategory, inst: string, value: boolean) => {
         setChecked((prev) => {
             const next = { ...prev, [`${cat}::${inst}`]: value };
             if (value) {
-                // Apply dependency rules
-                for (const rule of DEPENDENCY_RULES) {
-                    if (rule.triggerItem === inst) {
-                        for (const dep of rule.targetItems) {
-                            next[`${rule.targetCategory}::${dep}`] = true;
-                        }
-                    }
-                }
+                applyDependencyRules(next, cat, inst);
             }
             return next;
         });
@@ -178,14 +197,18 @@ function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalB
 
 export function SongEditModal({ isOpen, onClose, song, onSave }: SongEditModalProps) {
     const categories = useStore((s) => s.categories);
+    const dependencyRules = useStore((s) => s.dependencyRules);
     const categoriesKey = INSTRUMENT_CATEGORIES
         .map((cat) => `${cat}:${(categories[cat] ?? []).join("|")}`)
+        .join("::");
+    const dependencyRulesKey = dependencyRules
+        .map((rule) => `${rule.triggerCategory}:${rule.triggerName}->${rule.targetCategory}:${rule.targetName}`)
         .join("::");
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={song ? "曲を編集" : "曲を追加"} wide>
             <SongEditModalBody
-                key={`${song?.id ?? "new"}::${categoriesKey}`}
+                key={`${song?.id ?? "new"}::${categoriesKey}::${dependencyRulesKey}`}
                 categories={categories}
                 song={song}
                 onClose={onClose}

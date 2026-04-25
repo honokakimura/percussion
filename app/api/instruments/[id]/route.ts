@@ -24,6 +24,15 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       }
     }
 
+    await prisma.instrumentDependency.deleteMany({
+      where: {
+        OR: [
+          { triggerCategory: instrument.category, triggerName: instrument.name },
+          { targetCategory: instrument.category, targetName: instrument.name },
+        ],
+      },
+    });
+
     await prisma.instrument.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (e) {
