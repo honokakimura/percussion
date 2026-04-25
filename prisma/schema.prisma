@@ -1,0 +1,38 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Song {
+  id          String   @id @default(cuid())
+  name        String
+  instruments Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// 追加: Instrumentモデル
+model Instrument {
+  id       String @id @default(cuid())
+  name     String
+  category String // 日本語のカテゴリ名（"楽器類"など）をそのまま入れるためStringにしています
+  order    Int
+
+  // seed.tsの name_category: { name, category } に対応するために必須
+  @@unique([name, category])
+}
+
+// 既存のEnum（もしコード内で使いたい場合は残しておきます）
+enum InstrumentCategory {
+  GAKKI
+  KOMONO
+  DRUMSET
+  STANDCASE
+  OTHERS
+}
