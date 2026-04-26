@@ -69,6 +69,7 @@ export function InstrumentEditModal({
         try {
             await onUpdate(instrumentId, name.trim(), instrumentName, instrumentCategory);
             showToast("楽器名を更新しました");
+            onClose();
         } catch (e) {
             showToast((e as Error).message, "error");
         } finally {
