@@ -6,6 +6,7 @@ interface StoreState {
     songs: Song[];
     categories: Record<InstrumentCategory, string[]>;
     dependencyRules: DependencyRule[];
+    alwaysCarryInstruments: Song["instruments"];
     loaded: boolean;
 
     // Actions
@@ -15,6 +16,7 @@ interface StoreState {
     addSong: (name: string, instruments: Song["instruments"]) => Promise<void>;
     updateSong: (id: string, name: string, instruments: Song["instruments"]) => Promise<void>;
     deleteSong: (id: string) => Promise<void>;
+    updateAlwaysCarryInstruments: (instruments: Song["instruments"]) => Promise<void>;
 
     // Instruments
     addInstrument: (name: string, category: InstrumentCategory) => Promise<void>;
@@ -38,17 +40,20 @@ export const useStore = create<StoreState>((set) => ({
     songs: [],
     categories: Object.fromEntries(INSTRUMENT_CATEGORIES.map((c) => [c, []])) as unknown as Record<InstrumentCategory, string[]>,
     dependencyRules: [],
+    alwaysCarryInstruments: {},
     loaded: false,
     instrumentsWithId: [],
 
     fetchAll: async () => {
-        const [songsRes, instrumentsRes] = await Promise.all([
+        const [songsRes, instrumentsRes, alwaysCarryRes] = await Promise.all([
             fetch("/api/songs"),
             fetch("/api/instruments"),
+            fetch("/api/always-carry"),
         ]);
         const dependencyRulesRes = await fetch("/api/instrument-dependencies");
         const songsJson: unknown = await songsRes.json();
         const instrumentsJson: unknown = await instrumentsRes.json();
+        const alwaysCarryJson: unknown = await alwaysCarryRes.json();
         const dependencyRulesJson: unknown = await dependencyRulesRes.json();
 
         const songs: Song[] = Array.isArray(songsJson) ? (songsJson as Song[]) : [];
@@ -59,6 +64,10 @@ export const useStore = create<StoreState>((set) => ({
         const dependencyRules: DependencyRule[] = Array.isArray(dependencyRulesJson)
             ? (dependencyRulesJson as DependencyRule[])
             : [];
+        const alwaysCarryInstruments: Song["instruments"] =
+            alwaysCarryJson && typeof alwaysCarryJson === "object"
+                ? (alwaysCarryJson as Song["instruments"])
+                : {};
 
         // Also fetch raw list with IDs for delete
         const instWithIdRes = await fetch("/api/instruments?withId=1");
@@ -74,7 +83,7 @@ export const useStore = create<StoreState>((set) => ({
             INSTRUMENT_CATEGORIES.map((c) => [c, Array.isArray(rawInstruments[c]) ? rawInstruments[c] : []])
         ) as Record<InstrumentCategory, string[]>;
 
-        set({ songs, categories, dependencyRules, loaded: true, instrumentsWithId });
+        set({ songs, categories, dependencyRules, alwaysCarryInstruments, loaded: true, instrumentsWithId });
     },
 
     addSong: async (name, instruments) => {
@@ -103,6 +112,16 @@ export const useStore = create<StoreState>((set) => ({
         const res = await fetch(`/api/songs/${id}`, { method: "DELETE" });
         if (!res.ok) throw new Error((await res.json()).error);
         set((s) => ({ songs: s.songs.filter((song) => song.id !== id) }));
+    },
+
+    updateAlwaysCarryInstruments: async (instruments) => {
+        const res = await fetch("/api/always-carry", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ instruments }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error);
+        set({ alwaysCarryInstruments: instruments });
     },
 
     addInstrument: async (name, category) => {

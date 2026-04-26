@@ -12,10 +12,11 @@ interface GenerateViewProps {
 }
 
 export function GenerateView({ showToast }: GenerateViewProps) {
-    const { songs, categories } = useStore();
+    const { songs, categories, alwaysCarryInstruments } = useStore();
     const songsList = useMemo(() => (Array.isArray(songs) ? songs : []), [songs]);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [tempOverrides, setTempOverrides] = useState<Record<string, boolean>>({});
+    const [includeAlwaysCarry, setIncludeAlwaysCarry] = useState(true);
     const [copied, setCopied] = useState(false);
 
     const baseChecked = useMemo(() => {
@@ -23,6 +24,13 @@ export function GenerateView({ showToast }: GenerateViewProps) {
         for (const cat of INSTRUMENT_CATEGORIES) {
             for (const inst of categories[cat] ?? []) {
                 next[`${cat}::${inst}`] = false;
+            }
+        }
+        if (includeAlwaysCarry) {
+            for (const cat of INSTRUMENT_CATEGORIES) {
+                for (const inst of alwaysCarryInstruments[cat] ?? []) {
+                    next[`${cat}::${inst}`] = true;
+                }
             }
         }
         for (const id of selectedIds) {
@@ -35,7 +43,7 @@ export function GenerateView({ showToast }: GenerateViewProps) {
             }
         }
         return next;
-    }, [categories, selectedIds, songsList]);
+    }, [alwaysCarryInstruments, categories, includeAlwaysCarry, selectedIds, songsList]);
 
     const checkedMap = useMemo(
         () => ({ ...baseChecked, ...tempOverrides }),
@@ -134,6 +142,17 @@ export function GenerateView({ showToast }: GenerateViewProps) {
                         <CardDescription>必要なものだけONにしてください</CardDescription>
                     </CardHeader>
                     <CardContent>
+                        <label className="mb-4 inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-700">
+                            <Checkbox
+                                checked={includeAlwaysCarry}
+                                onCheckedChange={(checked) => {
+                                    setIncludeAlwaysCarry(checked === true);
+                                    setTempOverrides({});
+                                }}
+                                aria-label="常時運搬セットを含める"
+                            />
+                            常時運搬セットを含める
+                        </label>
                         <div className="space-y-4">
                             {INSTRUMENT_CATEGORIES.map((cat) => {
                                 const insts = categories[cat] ?? [];
