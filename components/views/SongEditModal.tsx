@@ -103,7 +103,7 @@ function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalB
     return (
         <div className="space-y-5">
             <div>
-                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-zinc-600 uppercase tracking-wider mb-1.5">
                     曲名
                 </label>
                 <input
@@ -111,7 +111,7 @@ function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalB
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="曲名を入力"
-                    className="w-full bg-zinc-800 border border-zinc-600 rounded-lg px-3 py-2 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500 transition-colors"
+                    className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-zinc-500 transition-colors"
                 />
             </div>
 
@@ -122,18 +122,18 @@ function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalB
                 return (
                     <div key={cat}>
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">{cat}</span>
+                            <span className="text-xs font-semibold text-zinc-600 uppercase tracking-wider">{cat}</span>
                             {isDrumSet && (
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => toggleAllDrumSet(true)}
-                                        className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors"
+                                        className="text-xs px-2 py-0.5 rounded bg-zinc-900 text-white hover:bg-zinc-700 transition-colors"
                                     >
                                         一括ON
                                     </button>
                                     <button
                                         onClick={() => toggleAllDrumSet(false)}
-                                        className="text-xs px-2 py-0.5 rounded bg-zinc-700 text-zinc-400 hover:bg-zinc-600 transition-colors"
+                                        className="text-xs px-2 py-0.5 rounded bg-zinc-200 text-zinc-700 hover:bg-zinc-300 transition-colors"
                                     >
                                         全解除
                                     </button>
@@ -147,8 +147,8 @@ function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalB
                                     <label
                                         key={key}
                                         className={`flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer transition-colors ${checked[key]
-                                            ? "bg-amber-500/15 border border-amber-500/40"
-                                            : "bg-zinc-800 border border-zinc-700 hover:border-zinc-500"
+                                            ? "bg-zinc-900/10 border border-zinc-400"
+                                            : "bg-white border border-zinc-300 hover:border-zinc-500"
                                             }`}
                                     >
                                         <input
@@ -158,7 +158,7 @@ function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalB
                                             className="sr-only"
                                         />
                                         <div
-                                            className={`w-4 h-4 rounded flex items-center justify-center shrink-0 transition-colors ${checked[key] ? "bg-amber-500" : "bg-zinc-700 border border-zinc-500"
+                                            className={`w-4 h-4 rounded flex items-center justify-center shrink-0 transition-colors ${checked[key] ? "bg-zinc-900" : "bg-white border border-zinc-400"
                                                 }`}
                                         >
                                             {checked[key] && (
@@ -167,7 +167,7 @@ function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalB
                                                 </svg>
                                             )}
                                         </div>
-                                        <span className="text-sm text-zinc-200">{inst}</span>
+                                        <span className="text-sm text-zinc-900">{inst}</span>
                                     </label>
                                 );
                             })}
@@ -176,17 +176,17 @@ function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalB
                 );
             })}
 
-            <div className="flex justify-end gap-3 pt-2 border-t border-zinc-700">
+            <div className="flex justify-end gap-3 pt-2 border-t border-zinc-200">
                 <button
                     onClick={onClose}
-                    className="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
+                    className="px-4 py-2 rounded-lg text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
                 >
                     キャンセル
                 </button>
                 <button
                     onClick={handleSave}
                     disabled={saving || !name.trim()}
-                    className="px-5 py-2 rounded-lg text-sm font-medium bg-amber-500 hover:bg-amber-400 text-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-5 py-2 rounded-lg text-sm font-medium bg-zinc-900 hover:bg-zinc-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {saving ? "保存中..." : "保存"}
                 </button>

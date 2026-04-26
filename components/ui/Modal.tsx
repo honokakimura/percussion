@@ -29,15 +29,14 @@ export function Modal({ isOpen, onClose, title, children, wide }: ModalProps) {
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div
-        className={`relative bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl w-full ${
-          wide ? "max-w-2xl" : "max-w-lg"
-        } max-h-[85vh] flex flex-col`}
+        className={`relative bg-white border border-zinc-200 rounded-2xl shadow-2xl w-full ${wide ? "max-w-2xl" : "max-w-lg"
+          } max-h-[85vh] flex flex-col`}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-700">
-          <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200">
+          <h2 className="text-lg font-semibold text-zinc-900">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors"
+            className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
           >
             <X size={18} />
           </button>

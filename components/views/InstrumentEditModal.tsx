@@ -116,7 +116,7 @@ export function InstrumentEditModal({
         <Modal isOpen={isOpen} onClose={onClose} title="楽器を編集" wide>
             <div className="space-y-6">
                 {/* 楽器名編集 */}
-                <Card className="bg-zinc-800 border-zinc-700">
+                <Card className="bg-zinc-50 border-zinc-200">
                     <CardHeader>
                         <CardTitle className="text-base">楽器名</CardTitle>
                     </CardHeader>
@@ -140,7 +140,7 @@ export function InstrumentEditModal({
                 </Card>
 
                 {/* リレーション追加 */}
-                <Card className="bg-zinc-800 border-zinc-700">
+                <Card className="bg-zinc-50 border-zinc-200">
                     <CardHeader>
                         <CardTitle className="text-base">連動ルールを追加</CardTitle>
                         <CardDescription>この楽器が選ばれた時に自動で選ばれる楽器を指定します</CardDescription>
@@ -148,11 +148,11 @@ export function InstrumentEditModal({
                     <CardContent className="space-y-3">
                         <div className="grid gap-3">
                             <div className="space-y-2">
-                                <label className="block text-xs font-medium text-zinc-400">自動で選ばれる楽器のカテゴリ</label>
+                                <label className="block text-xs font-medium text-zinc-600">自動で選ばれる楽器のカテゴリ</label>
                                 <select
                                     value={targetCategory}
                                     onChange={(e) => updateTargetCategory(e.target.value as InstrumentCategory)}
-                                    className="h-10 rounded-md border border-zinc-600 bg-zinc-900 px-3 text-sm text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                                    className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
                                 >
                                     {INSTRUMENT_CATEGORIES.map((cat) => (
                                         <option key={cat} value={cat}>
@@ -163,11 +163,11 @@ export function InstrumentEditModal({
                             </div>
 
                             <div className="space-y-2">
-                                <label className="block text-xs font-medium text-zinc-400">楽器名</label>
+                                <label className="block text-xs font-medium text-zinc-600">楽器名</label>
                                 <select
                                     value={targetName}
                                     onChange={(e) => setTargetName(e.target.value)}
-                                    className="h-10 rounded-md border border-zinc-600 bg-zinc-900 px-3 text-sm text-zinc-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400"
+                                    className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
                                 >
                                     {targetOptions.length === 0 ? (
                                         <option value="">楽器がありません</option>
@@ -194,13 +194,13 @@ export function InstrumentEditModal({
                 </Card>
 
                 {/* 関連リレーション表示 */}
-                <Card className="bg-zinc-800 border-zinc-700">
+                <Card className="bg-zinc-50 border-zinc-200">
                     <CardHeader>
                         <CardTitle className="text-base">関連する連動ルール</CardTitle>
                     </CardHeader>
                     <CardContent>
                         {relatedDependencies.length === 0 ? (
-                            <p className="text-sm text-zinc-500">連動ルールはありません</p>
+                            <p className="text-sm text-zinc-600">連動ルールはありません</p>
                         ) : (
                             <div className="space-y-2">
                                 {relatedDependencies.map((rule) => {
@@ -208,17 +208,17 @@ export function InstrumentEditModal({
                                     return (
                                         <div
                                             key={rule.id}
-                                            className="flex items-center justify-between gap-3 rounded-lg border border-zinc-600 bg-zinc-900 px-4 py-3"
+                                            className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3"
                                         >
                                             <div className="flex-1 min-w-0">
                                                 {isThis ? (
-                                                    <p className="text-sm text-zinc-300">
+                                                    <p className="text-sm text-zinc-800">
                                                         <span className="font-medium">{rule.triggerName}</span>
                                                         <span className="text-zinc-500"> → </span>
                                                         <span>{rule.targetCategory} / {rule.targetName}</span>
                                                     </p>
                                                 ) : (
-                                                    <p className="text-sm text-zinc-300">
+                                                    <p className="text-sm text-zinc-800">
                                                         <span>{rule.triggerCategory} / {rule.triggerName}</span>
                                                         <span className="text-zinc-500"> → </span>
                                                         <span className="font-medium">{rule.targetName}</span>
@@ -230,7 +230,7 @@ export function InstrumentEditModal({
                                                 disabled={deletingDependencyId === rule.id}
                                                 variant="ghost"
                                                 size="icon"
-                                                className="text-zinc-500 hover:text-red-400 hover:bg-red-900/20 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="text-zinc-500 hover:text-red-600 hover:bg-red-50 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 <Trash2 size={14} />
                                             </Button>
