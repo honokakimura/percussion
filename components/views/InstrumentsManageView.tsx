@@ -1,11 +1,12 @@
 "use client";
 import { useMemo, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Edit2 } from "lucide-react";
 import { useStore } from "@/store/useStore";
 import { InstrumentCategory, INSTRUMENT_CATEGORIES } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { InstrumentEditModal } from "./InstrumentEditModal";
 
 interface InstrumentsManageViewProps {
     showToast: (msg: string, type?: "success" | "error") => void;
@@ -17,6 +18,7 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
         instrumentsWithId,
         dependencyRules,
         addInstrument,
+        updateInstrument,
         deleteInstrument,
         addDependencyRule,
         deleteDependencyRule,
@@ -29,6 +31,14 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
     const [targetCategory, setTargetCategory] = useState<InstrumentCategory>(INSTRUMENT_CATEGORIES[0]);
     const [targetName, setTargetName] = useState("");
     const [savingRule, setSavingRule] = useState(false);
+
+    // Edit modal state
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [selectedInstrument, setSelectedInstrument] = useState<{
+        id: string;
+        name: string;
+        category: InstrumentCategory;
+    } | null>(null);
 
     const triggerOptions = useMemo(() => categories[triggerCategory] ?? [], [categories, triggerCategory]);
     const targetOptions = useMemo(() => categories[targetCategory] ?? [], [categories, targetCategory]);
@@ -54,6 +64,11 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
         } finally {
             setAdding(false);
         }
+    };
+
+    const handleEditInstrument = (id: string, name: string, category: InstrumentCategory) => {
+        setSelectedInstrument({ id, name, category });
+        setEditModalOpen(true);
     };
 
     const handleDelete = async (cat: InstrumentCategory, name: string) => {
@@ -110,8 +125,34 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
     const selectedTriggerName = triggerName || triggerOptions[0] || "";
     const selectedTargetName = targetName || targetOptions[0] || "";
 
+    // Get relations for a specific instrument
+    const getInstrumentRelations = (category: InstrumentCategory, name: string) => {
+        return dependencyRules.filter(
+            (rule) =>
+                (rule.triggerCategory === category && rule.triggerName === name) ||
+                (rule.targetCategory === category && rule.targetName === name)
+        );
+    };
+
     return (
         <div className="space-y-6">
+            {/* 楽器編集モーダル */}
+            {selectedInstrument && (
+                <InstrumentEditModal
+                    isOpen={editModalOpen}
+                    onClose={() => setEditModalOpen(false)}
+                    instrumentId={selectedInstrument.id}
+                    instrumentName={selectedInstrument.name}
+                    instrumentCategory={selectedInstrument.category}
+                    onUpdate={updateInstrument}
+                    onAddDependency={addDependencyRule}
+                    onDeleteDependency={deleteDependencyRule}
+                    categories={categories}
+                    allDependencies={dependencyRules}
+                    showToast={showToast}
+                />
+            )}
+
             <Card>
                 <CardHeader>
                     <CardTitle>楽器を追加</CardTitle>
@@ -159,23 +200,64 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                             {insts.length === 0 ? (
                                 <p className="text-zinc-600 text-sm">なし</p>
                             ) : (
-                                <div className="space-y-2">
-                                    {insts.map((inst) => (
-                                        <div
-                                            key={inst}
-                                            className="flex items-center justify-between bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-2"
-                                        >
-                                            <span className="text-sm text-zinc-900">{inst}</span>
-                                            <Button
-                                                onClick={() => handleDelete(cat, inst)}
-                                                variant="ghost"
-                                                size="icon"
-                                                className="text-zinc-500 hover:text-red-600 hover:bg-red-50"
+                                <div className="space-y-3">
+                                    {insts.map((inst) => {
+                                        const relations = getInstrumentRelations(cat, inst);
+                                        const instData = instrumentsWithId.find((i) => i.name === inst && i.category === cat);
+
+                                        return (
+                                            <div
+                                                key={inst}
+                                                className="flex flex-col gap-2 bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-3"
                                             >
-                                                <Trash2 size={14} />
-                                            </Button>
-                                        </div>
-                                    ))}
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <div className="flex-1 min-w-0">
+                                                        <span className="text-sm font-medium text-zinc-900">{inst}</span>
+                                                    </div>
+                                                    <div className="flex gap-1 shrink-0">
+                                                        <Button
+                                                            onClick={() => instData && handleEditInstrument(instData.id, inst, cat)}
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="text-zinc-500 hover:text-blue-600 hover:bg-blue-50"
+                                                        >
+                                                            <Edit2 size={14} />
+                                                        </Button>
+                                                        <Button
+                                                            onClick={() => handleDelete(cat, inst)}
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="text-zinc-500 hover:text-red-600 hover:bg-red-50"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+
+                                                {/* 関連リレーション表示 */}
+                                                {relations.length > 0 && (
+                                                    <div className="text-xs text-zinc-600 space-y-1 pl-2 border-l-2 border-zinc-300">
+                                                        {relations.map((rule) => {
+                                                            const isThis = rule.triggerCategory === cat && rule.triggerName === inst;
+                                                            return (
+                                                                <div key={rule.id}>
+                                                                    {isThis ? (
+                                                                        <span>
+                                                                            ← <span className="text-zinc-700 font-medium">{rule.targetCategory} / {rule.targetName}</span>
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span>
+                                                                            → <span className="text-zinc-700 font-medium">{rule.targetCategory} / {rule.targetName}</span>
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </CardContent>

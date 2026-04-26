@@ -18,6 +18,7 @@ interface StoreState {
 
     // Instruments
     addInstrument: (name: string, category: InstrumentCategory) => Promise<void>;
+    updateInstrument: (id: string, name: string, oldName: string, category: InstrumentCategory) => Promise<void>;
     deleteInstrument: (id: string, name: string, category: InstrumentCategory) => Promise<void>;
 
     // Dependency rules
@@ -115,6 +116,29 @@ export const useStore = create<StoreState>((set) => ({
         set((s) => ({
             categories: { ...s.categories, [category]: [...(s.categories[category] ?? []), name] },
             instrumentsWithId: [...s.instrumentsWithId, inst],
+        }));
+    },
+
+    updateInstrument: async (id, name, oldName, category) => {
+        const res = await fetch(`/api/instruments/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error);
+
+        // Refresh songs as they may have been modified server-side
+        const songsRes = await fetch("/api/songs");
+        const songsJson: unknown = await songsRes.json();
+        const songs: Song[] = Array.isArray(songsJson) ? (songsJson as Song[]) : [];
+
+        set((s) => ({
+            categories: {
+                ...s.categories,
+                [category]: s.categories[category].map((n) => (n === oldName ? name : n)),
+            },
+            instrumentsWithId: s.instrumentsWithId.map((i) => (i.id === id ? { ...i, name } : i)),
+            songs,
         }));
     },
 
