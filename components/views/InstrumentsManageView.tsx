@@ -37,9 +37,13 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
     const [savingAlwaysCarry, setSavingAlwaysCarry] = useState(false);
     const [alwaysCarryOverrides, setAlwaysCarryOverrides] = useState<Record<string, boolean>>({});
 
-    // 折りたたみ状態（デフォルトは非表示）
+    // 折りたたみ状態（楽器カテゴリ以外はデフォルト非表示）
+    const [addOpen, setAddOpen] = useState(false);
     const [alwaysCarryOpen, setAlwaysCarryOpen] = useState(false);
     const [dependencyOpen, setDependencyOpen] = useState(false);
+    const [categoryOpen, setCategoryOpen] = useState<Record<string, boolean>>(
+        () => Object.fromEntries(INSTRUMENT_CATEGORIES.map((cat) => [cat, true]))
+    );
 
     // Edit modal state
     const [editModalOpen, setEditModalOpen] = useState(false);
@@ -123,7 +127,6 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
             showToast("同じ楽器同士の連動は設定できません", "error");
             return;
         }
-
         setSavingRule(true);
         try {
             await addDependencyRule(triggerCategory, selectedTriggerName, targetCategory, selectedTargetName);
@@ -168,7 +171,6 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
             const selected = (categories[cat] ?? []).filter((inst) => alwaysCarryChecked[`${cat}::${inst}`]);
             if (selected.length > 0) instruments[cat] = selected;
         }
-
         setSavingAlwaysCarry(true);
         try {
             await updateAlwaysCarryInstruments(instruments);
@@ -181,7 +183,6 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
         }
     };
 
-    // Get relations for a specific instrument
     const getInstrumentRelations = (category: InstrumentCategory, name: string) => {
         return dependencyRules.filter(
             (rule) =>
@@ -190,7 +191,6 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
         );
     };
 
-    // 常時運搬セットに設定済みの楽器数
     const alwaysCarryCount = useMemo(
         () => Object.values(alwaysCarryInstruments).flat().length,
         [alwaysCarryInstruments]
@@ -198,7 +198,6 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
 
     return (
         <div className="space-y-6">
-            {/* 楽器編集モーダル */}
             {selectedInstrument && (
                 <InstrumentEditModal
                     isOpen={editModalOpen}
@@ -215,61 +214,70 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                 />
             )}
 
+            {/* 楽器を追加（デフォルト閉じ） */}
             <Card>
-                <CardHeader>
-                    <CardTitle>楽器を追加</CardTitle>
-                    <CardDescription>カテゴリを選んで楽器名を入力</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex gap-2 flex-wrap sm:flex-nowrap">
-                        <select
-                            value={newCategory}
-                            onChange={(e) => setNewCategory(e.target.value as InstrumentCategory)}
-                            className="h-10 bg-white border border-zinc-300 rounded-md px-3 py-2 text-sm text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
-                        >
-                            {INSTRUMENT_CATEGORIES.map((cat) => (
-                                <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                        </select>
-                        <Input
-                            value={newName}
-                            onChange={(e) => setNewName(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-                            placeholder="楽器名"
-                            className="flex-1 basis-48"
-                        />
-                        <Button
-                            onClick={handleAdd}
-                            disabled={adding || !newName.trim()}
-                        >
-                            <Plus size={15} />
-                            {adding ? "追加中..." : "追加"}
-                        </Button>
+                <CardHeader
+                    className="cursor-pointer select-none"
+                    onClick={() => setAddOpen((prev) => !prev)}
+                >
+                    <div className="flex items-center gap-2">
+                        {addOpen
+                            ? <ChevronDown size={16} className="text-zinc-400 shrink-0" />
+                            : <ChevronRight size={16} className="text-zinc-400 shrink-0" />
+                        }
+                        <CardTitle>楽器を追加</CardTitle>
                     </div>
-                </CardContent>
+                    <CardDescription className="pl-6">カテゴリを選んで楽器名を入力</CardDescription>
+                </CardHeader>
+                {addOpen && (
+                    <CardContent>
+                        <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+                            <select
+                                value={newCategory}
+                                onChange={(e) => setNewCategory(e.target.value as InstrumentCategory)}
+                                className="h-10 bg-white border border-zinc-300 rounded-md px-3 py-2 text-sm text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+                            >
+                                {INSTRUMENT_CATEGORIES.map((cat) => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </select>
+                            <Input
+                                value={newName}
+                                onChange={(e) => setNewName(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+                                placeholder="楽器名"
+                                className="flex-1 basis-48"
+                            />
+                            <Button
+                                onClick={handleAdd}
+                                disabled={adding || !newName.trim()}
+                            >
+                                <Plus size={15} />
+                                {adding ? "追加中..." : "追加"}
+                            </Button>
+                        </div>
+                    </CardContent>
+                )}
             </Card>
 
-            {/* 常時運搬セット（折りたたみ） */}
+            {/* 常時運搬セット（デフォルト閉じ） */}
             <Card>
                 <CardHeader
                     className="cursor-pointer select-none"
                     onClick={() => setAlwaysCarryOpen((prev) => !prev)}
                 >
-                    <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                            {alwaysCarryOpen
-                                ? <ChevronDown size={16} className="text-zinc-400 shrink-0" />
-                                : <ChevronRight size={16} className="text-zinc-400 shrink-0" />
-                            }
-                            <CardTitle>常時運搬セット</CardTitle>
-                            {alwaysCarryCount > 0 && (
-                                <span className="text-xs text-zinc-500 font-normal">({alwaysCarryCount}種)</span>
-                            )}
-                        </div>
+                    <div className="flex items-center gap-2">
+                        {alwaysCarryOpen
+                            ? <ChevronDown size={16} className="text-zinc-400 shrink-0" />
+                            : <ChevronRight size={16} className="text-zinc-400 shrink-0" />
+                        }
+                        <CardTitle>常時運搬セット</CardTitle>
+                        {alwaysCarryCount > 0 && (
+                            <span className="text-xs text-zinc-500 font-normal">({alwaysCarryCount}種)</span>
+                        )}
                     </div>
                     <CardDescription className="pl-6">曲に関係なく毎回運ぶ楽器を設定します</CardDescription>
                 </CardHeader>
-
                 {alwaysCarryOpen && (
                     <CardContent className="space-y-4">
                         {INSTRUMENT_CATEGORIES.map((cat) => {
@@ -308,7 +316,6 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                                 </div>
                             );
                         })}
-
                         <div className="flex justify-end">
                             <Button
                                 onClick={handleSaveAlwaysCarry}
@@ -321,86 +328,98 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                 )}
             </Card>
 
+            {/* 楽器カテゴリ一覧（デフォルト開き） */}
             {INSTRUMENT_CATEGORIES.map((cat) => {
                 const insts = categories[cat] ?? [];
+                const isOpen = categoryOpen[cat] ?? true;
                 return (
                     <Card key={cat}>
-                        <CardHeader>
-                            <CardTitle>
-                                {cat} <span className="text-xs text-zinc-500">({insts.length})</span>
-                            </CardTitle>
+                        <CardHeader
+                            className="cursor-pointer select-none"
+                            onClick={() => setCategoryOpen((prev) => ({ ...prev, [cat]: !prev[cat] }))}
+                        >
+                            <div className="flex items-center gap-2">
+                                {isOpen
+                                    ? <ChevronDown size={16} className="text-zinc-400 shrink-0" />
+                                    : <ChevronRight size={16} className="text-zinc-400 shrink-0" />
+                                }
+                                <CardTitle>
+                                    {cat} <span className="text-xs text-zinc-500 font-normal">({insts.length})</span>
+                                </CardTitle>
+                            </div>
                         </CardHeader>
-                        <CardContent>
-                            {insts.length === 0 ? (
-                                <p className="text-zinc-600 text-sm">なし</p>
-                            ) : (
-                                <div className="space-y-3">
-                                    {insts.map((inst) => {
-                                        const relations = getInstrumentRelations(cat, inst);
-                                        const instData = instrumentsWithId.find((i) => i.name === inst && i.category === cat);
-
-                                        return (
-                                            <div
-                                                key={inst}
-                                                className="flex flex-col gap-2 bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-3"
-                                            >
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <div className="flex-1 min-w-0">
-                                                        <span className="text-sm font-medium text-zinc-900">{inst}</span>
+                        {isOpen && (
+                            <CardContent>
+                                {insts.length === 0 ? (
+                                    <p className="text-zinc-600 text-sm">なし</p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {insts.map((inst) => {
+                                            const relations = getInstrumentRelations(cat, inst);
+                                            const instData = instrumentsWithId.find((i) => i.name === inst && i.category === cat);
+                                            return (
+                                                <div
+                                                    key={inst}
+                                                    className="flex flex-col gap-2 bg-zinc-50 border border-zinc-200 rounded-lg px-4 py-3"
+                                                >
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <div className="flex-1 min-w-0">
+                                                            <span className="text-sm font-medium text-zinc-900">{inst}</span>
+                                                        </div>
+                                                        <div className="flex gap-1 shrink-0">
+                                                            <Button
+                                                                onClick={() => instData && handleEditInstrument(instData.id, inst, cat)}
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="text-zinc-500 hover:text-blue-600 hover:bg-blue-50"
+                                                            >
+                                                                <Edit2 size={14} />
+                                                            </Button>
+                                                            <Button
+                                                                onClick={() => handleDelete(cat, inst)}
+                                                                disabled={deletingInstrumentId === instData?.id}
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="text-zinc-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </Button>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex gap-1 shrink-0">
-                                                        <Button
-                                                            onClick={() => instData && handleEditInstrument(instData.id, inst, cat)}
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="text-zinc-500 hover:text-blue-600 hover:bg-blue-50"
-                                                        >
-                                                            <Edit2 size={14} />
-                                                        </Button>
-                                                        <Button
-                                                            onClick={() => handleDelete(cat, inst)}
-                                                            disabled={deletingInstrumentId === instData?.id}
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="text-zinc-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        >
-                                                            <Trash2 size={14} />
-                                                        </Button>
-                                                    </div>
+                                                    {relations.length > 0 && (
+                                                        <div className="text-xs text-zinc-600 space-y-1 pl-2 border-l-2 border-zinc-300">
+                                                            {relations.map((rule) => {
+                                                                const isTrigger = rule.triggerCategory === cat && rule.triggerName === inst;
+                                                                return (
+                                                                    <div key={rule.id}>
+                                                                        {isTrigger ? (
+                                                                            <span className="flex items-center gap-1.5">
+                                                                                <span className="inline-block bg-zinc-200 text-zinc-600 rounded px-1.5 py-0.5 text-[10px] font-medium leading-none shrink-0">連動先</span>
+                                                                                <span className="text-zinc-700 font-medium">{rule.targetCategory} / {rule.targetName}</span>
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="flex items-center gap-1.5">
+                                                                                <span className="inline-block bg-zinc-100 text-zinc-500 rounded px-1.5 py-0.5 text-[10px] font-medium leading-none shrink-0">連動元</span>
+                                                                                <span className="text-zinc-700 font-medium">{rule.triggerCategory} / {rule.triggerName}</span>
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
                                                 </div>
-
-                                                {/* 関連リレーション表示 */}
-                                                {relations.length > 0 && (
-                                                    <div className="text-xs text-zinc-600 space-y-1 pl-2 border-l-2 border-zinc-300">
-                                                        {relations.map((rule) => {
-                                                            const isThis = rule.triggerCategory === cat && rule.triggerName === inst;
-                                                            return (
-                                                                <div key={rule.id}>
-                                                                    {isThis ? (
-                                                                        <span>
-                                                                            ← <span className="text-zinc-700 font-medium">{rule.targetCategory} / {rule.targetName}</span>
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span>
-                                                                            → <span className="text-zinc-700 font-medium">{rule.targetCategory} / {rule.targetName}</span>
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </CardContent>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </CardContent>
+                        )}
                     </Card>
                 );
             })}
 
-            {/* 連動ルール（折りたたみ） */}
+            {/* 連動ルール（デフォルト閉じ） */}
             <Card>
                 <CardHeader
                     className="cursor-pointer select-none"
@@ -418,7 +437,6 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                     </div>
                     <CardDescription className="pl-6">この楽器を選んだら、こちらも自動で選ばれる関係を作れます</CardDescription>
                 </CardHeader>
-
                 {dependencyOpen && (
                     <CardContent className="space-y-4">
                         <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr] md:items-end">
@@ -431,9 +449,7 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                                         className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
                                     >
                                         {INSTRUMENT_CATEGORIES.map((cat) => (
-                                            <option key={cat} value={cat}>
-                                                {cat}
-                                            </option>
+                                            <option key={cat} value={cat}>{cat}</option>
                                         ))}
                                     </select>
                                     <select
@@ -445,19 +461,15 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                                             <option value="">楽器がありません</option>
                                         ) : (
                                             triggerOptions.map((inst) => (
-                                                <option key={inst} value={inst}>
-                                                    {inst}
-                                                </option>
+                                                <option key={inst} value={inst}>{inst}</option>
                                             ))
                                         )}
                                     </select>
                                 </div>
                             </div>
-
                             <div className="hidden md:flex items-center justify-center text-zinc-400 text-sm font-medium pb-2">
                                 →
                             </div>
-
                             <div className="space-y-2">
                                 <label className="block text-xs font-medium text-zinc-500">自動で選ばれる</label>
                                 <div className="grid gap-2 sm:grid-cols-2">
@@ -467,9 +479,7 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                                         className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
                                     >
                                         {INSTRUMENT_CATEGORIES.map((cat) => (
-                                            <option key={cat} value={cat}>
-                                                {cat}
-                                            </option>
+                                            <option key={cat} value={cat}>{cat}</option>
                                         ))}
                                     </select>
                                     <select
@@ -481,16 +491,13 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                                             <option value="">楽器がありません</option>
                                         ) : (
                                             targetOptions.map((inst) => (
-                                                <option key={inst} value={inst}>
-                                                    {inst}
-                                                </option>
+                                                <option key={inst} value={inst}>{inst}</option>
                                             ))
                                         )}
                                     </select>
                                 </div>
                             </div>
                         </div>
-
                         <div className="flex justify-end">
                             <Button
                                 onClick={handleAddDependencyRule}
@@ -500,7 +507,6 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                                 {savingRule ? "追加中..." : "ルールを追加"}
                             </Button>
                         </div>
-
                         {dependencySummary.length === 0 ? (
                             <p className="text-sm text-zinc-500">まだ連動ルールはありません</p>
                         ) : (

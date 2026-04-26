@@ -54,4 +54,4 @@ export const DEFAULT_INSTRUMENTS: Record<InstrumentCategory, string[]> = {
 export const TRANSPORT_FOOTER = `
 【所有者】吹奏楽部
 【運搬経路】部室 → 会場 → 部室
-【備考】後日写真添付。いつもありがと。`.trim();
+【備考】後日写真添付`.trim();

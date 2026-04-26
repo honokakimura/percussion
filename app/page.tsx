@@ -36,7 +36,6 @@ export default function HomePage() {
             </div>
             <div className="min-w-0">
               <h1 className="text-base font-bold text-zinc-900 leading-tight">打楽器 運搬申請</h1>
-              <p className="text-xs text-zinc-500">シンプルに作成してそのままコピー</p>
             </div>
           </CardContent>
         </Card>
