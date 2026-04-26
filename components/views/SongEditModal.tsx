@@ -79,6 +79,9 @@ function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalB
             const next = { ...prev };
             for (const inst of categories["ドラムセット"] ?? []) {
                 next[`ドラムセット::${inst}`] = value;
+                if (value) {
+                    applyDependencyRules(next, "ドラムセット", inst);
+                }
             }
             return next;
         });
