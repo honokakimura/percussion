@@ -44,6 +44,7 @@ export function InstrumentEditModal({
     const [targetCategory, setTargetCategory] = useState<InstrumentCategory>(INSTRUMENT_CATEGORIES[0]);
     const [targetName, setTargetName] = useState("");
     const [addingDependency, setAddingDependency] = useState(false);
+    const [deletingDependencyId, setDeletingDependencyId] = useState<string | null>(null);
 
     useEffect(() => {
         setName(instrumentName);
@@ -93,11 +94,14 @@ export function InstrumentEditModal({
     };
 
     const handleDeleteDependency = async (depId: string) => {
+        setDeletingDependencyId(depId);
         try {
             await onDeleteDependency(depId);
             showToast("連動ルールを削除しました");
         } catch (e) {
             showToast((e as Error).message, "error");
+        } finally {
+            setDeletingDependencyId(null);
         }
     };
 
@@ -128,7 +132,7 @@ export function InstrumentEditModal({
                                 onClick={handleUpdateName}
                                 disabled={updating || !name.trim() || name === instrumentName}
                             >
-                                変更
+                                {updating ? "更新中..." : "変更"}
                             </Button>
                         </div>
                     </CardContent>
@@ -182,7 +186,7 @@ export function InstrumentEditModal({
                                 className="w-full"
                             >
                                 <Plus size={15} />
-                                ルールを追加
+                                {addingDependency ? "追加中..." : "ルールを追加"}
                             </Button>
                         </div>
                     </CardContent>
@@ -222,9 +226,10 @@ export function InstrumentEditModal({
                                             </div>
                                             <Button
                                                 onClick={() => handleDeleteDependency(rule.id)}
+                                                disabled={deletingDependencyId === rule.id}
                                                 variant="ghost"
                                                 size="icon"
-                                                className="text-zinc-500 hover:text-red-400 hover:bg-red-900/20 shrink-0"
+                                                className="text-zinc-500 hover:text-red-400 hover:bg-red-900/20 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 <Trash2 size={14} />
                                             </Button>

@@ -39,6 +39,8 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
         name: string;
         category: InstrumentCategory;
     } | null>(null);
+    const [deletingInstrumentId, setDeletingInstrumentId] = useState<string | null>(null);
+    const [deletingRuleId, setDeletingRuleId] = useState<string | null>(null);
 
     const triggerOptions = useMemo(() => categories[triggerCategory] ?? [], [categories, triggerCategory]);
     const targetOptions = useMemo(() => categories[targetCategory] ?? [], [categories, targetCategory]);
@@ -75,11 +77,14 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
         if (!window.confirm(`「${name}」を削除しますか？\n登録済みの曲からも削除されます。`)) return;
         const inst = instrumentsWithId.find((i) => i.name === name && i.category === cat);
         if (!inst) return;
+        setDeletingInstrumentId(inst.id);
         try {
             await deleteInstrument(inst.id, name, cat);
             showToast("楽器を削除しました");
         } catch (e) {
             showToast((e as Error).message, "error");
+        } finally {
+            setDeletingInstrumentId(null);
         }
     };
 
@@ -102,11 +107,14 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
     };
 
     const handleDeleteDependencyRule = async (id: string) => {
+        setDeletingRuleId(id);
         try {
             await deleteDependencyRule(id);
             showToast("連動ルールを削除しました");
         } catch (e) {
             showToast((e as Error).message, "error");
+        } finally {
+            setDeletingRuleId(null);
         }
     };
 
@@ -181,7 +189,7 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                             disabled={adding || !newName.trim()}
                         >
                             <Plus size={15} />
-                            追加
+                            {adding ? "追加中..." : "追加"}
                         </Button>
                     </div>
                 </CardContent>
@@ -225,9 +233,10 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                                                         </Button>
                                                         <Button
                                                             onClick={() => handleDelete(cat, inst)}
+                                                            disabled={deletingInstrumentId === instData?.id}
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="text-zinc-500 hover:text-red-600 hover:bg-red-50"
+                                                            className="text-zinc-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
                                                             <Trash2 size={14} />
                                                         </Button>
@@ -347,7 +356,7 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                             disabled={savingRule || !selectedTriggerName || !selectedTargetName}
                         >
                             <Plus size={15} />
-                            ルールを追加
+                            {savingRule ? "追加中..." : "ルールを追加"}
                         </Button>
                     </div>
 
@@ -363,9 +372,10 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                                     <p className="text-sm text-zinc-900">{rule.label}</p>
                                     <Button
                                         onClick={() => handleDeleteDependencyRule(rule.id)}
+                                        disabled={deletingRuleId === rule.id}
                                         variant="ghost"
                                         size="icon"
-                                        className="text-zinc-500 hover:text-red-600 hover:bg-red-50"
+                                        className="text-zinc-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <Trash2 size={14} />
                                     </Button>
