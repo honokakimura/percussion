@@ -27,7 +27,6 @@ export async function GET() {
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        // 修正点1: targetItems を受け取れるように型定義と分割代入に追加
         const { triggerCategory, triggerName, targetCategory, targetName, targetItems } = body as {
             triggerCategory: string;
             triggerName: string;
@@ -65,8 +64,6 @@ export async function POST(req: NextRequest) {
                 triggerName: triggerName.trim(),
                 targetCategory,
                 targetName: targetName.trim(),
-                // 修正点2: データベースの必須項目である targetItems を保存する。
-                // フロントから送られていない場合は targetName を配列にして自動セットする
                 targetItems: targetItems || [targetName.trim()], 
             },
         });

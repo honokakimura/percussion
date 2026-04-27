@@ -62,18 +62,16 @@ export function GenerateView({ showToast }: GenerateViewProps) {
 
     const generateMessage = () => {
         const lines: string[] = [];
-        lines.push("【打楽器 運搬申請】");
-        lines.push("");
+        lines.push("名前: 打楽器");
 
         const selectedNames = songsList.filter((s) => selectedIds.has(s.id)).map((s) => s.name);
-        lines.push(`【対象曲】${selectedNames.join("、")}`);
-        lines.push("");
+        lines.push("楽器名称:");
 
         for (const cat of INSTRUMENT_CATEGORIES) {
             const items = (categories[cat] ?? []).filter((inst) => checkedMap[`${cat}::${inst}`]);
             if (items.length > 0) {
-                lines.push(`【${cat}】`);
-                for (const item of items) lines.push(`  ・${item}`);
+                lines.push(`〇${cat}`);
+                for (const item of items) lines.push(`  ${item}`);
                 lines.push("");
             }
         }

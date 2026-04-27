@@ -17,11 +17,10 @@ model Song {
   updatedAt   DateTime @updatedAt
 }
 
-// 追加: Instrumentモデル
 model Instrument {
   id       String @id @default(cuid())
   name     String
-  category String // 日本語のカテゴリ名（"楽器類"など）をそのまま入れるためStringにしています
+  category String // 日本語のカテゴリ名（"楽器類"など）をそのまま入れるためString
   order    Int
 
   // seed.tsの name_category: { name, category } に対応するために必須
@@ -41,7 +40,6 @@ model InstrumentDependency {
   @@index([targetCategory, targetName])
 }
 
-// 既存のEnum（もしコード内で使いたい場合は残しておきます）
 enum InstrumentCategory {
   GAKKI
   KOMONO
