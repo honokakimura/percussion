@@ -1,10 +1,11 @@
 "use client";
 import { create } from "zustand";
-import { Song, InstrumentCategory, INSTRUMENT_CATEGORIES, DependencyRule } from "@/types";
+import { Song, InstrumentCategory, DependencyRule, InstrumentCategoryItem } from "@/types";
 
 interface StoreState {
     songs: Song[];
     categories: Record<InstrumentCategory, string[]>;
+    availableCategories: InstrumentCategoryItem[];
     dependencyRules: DependencyRule[];
     alwaysCarryInstruments: Song["instruments"];
     loaded: boolean;
@@ -20,8 +21,19 @@ interface StoreState {
 
     // Instruments
     addInstrument: (name: string, category: InstrumentCategory) => Promise<void>;
-    updateInstrument: (id: string, name: string, oldName: string, category: InstrumentCategory) => Promise<void>;
+    updateInstrument: (
+        id: string,
+        nextName: string,
+        nextCategory: InstrumentCategory,
+        prevName: string,
+        prevCategory: InstrumentCategory,
+    ) => Promise<void>;
     deleteInstrument: (id: string, name: string, category: InstrumentCategory) => Promise<void>;
+
+    // Categories
+    addCategory: (name: string) => Promise<void>;
+    updateCategory: (id: string, payload: { name?: string; order?: number }) => Promise<void>;
+    deleteCategory: (id: string) => Promise<void>;
 
     // Dependency rules
     addDependencyRule: (
@@ -36,33 +48,59 @@ interface StoreState {
     instrumentsWithId: { id: string; name: string; category: string }[];
 }
 
+function buildCategoryMap(
+    availableCategories: InstrumentCategoryItem[],
+    rawInstruments: Record<string, string[]>,
+): Record<InstrumentCategory, string[]> {
+    const map: Record<string, string[]> = {};
+
+    for (const category of availableCategories) {
+        map[category.name] = Array.isArray(rawInstruments[category.name]) ? rawInstruments[category.name] : [];
+    }
+
+    for (const [name, instruments] of Object.entries(rawInstruments)) {
+        if (!Array.isArray(instruments)) continue;
+        if (!map[name]) map[name] = instruments;
+    }
+
+    return map;
+}
+
 export const useStore = create<StoreState>((set) => ({
     songs: [],
-    categories: Object.fromEntries(INSTRUMENT_CATEGORIES.map((c) => [c, []])) as unknown as Record<InstrumentCategory, string[]>,
+    categories: {},
+    availableCategories: [],
     dependencyRules: [],
     alwaysCarryInstruments: {},
     loaded: false,
     instrumentsWithId: [],
 
     fetchAll: async () => {
-        const [songsRes, instrumentsRes, alwaysCarryRes] = await Promise.all([
+        const [songsRes, instrumentsRes, alwaysCarryRes, categoriesRes] = await Promise.all([
             fetch("/api/songs"),
             fetch("/api/instruments"),
             fetch("/api/always-carry"),
+            fetch("/api/instrument-categories"),
         ]);
         const dependencyRulesRes = await fetch("/api/instrument-dependencies");
         const songsJson: unknown = await songsRes.json();
         const instrumentsJson: unknown = await instrumentsRes.json();
         const alwaysCarryJson: unknown = await alwaysCarryRes.json();
         const dependencyRulesJson: unknown = await dependencyRulesRes.json();
+        const categoriesJson: unknown = await categoriesRes.json();
 
         const songs: Song[] = Array.isArray(songsJson) ? (songsJson as Song[]) : [];
-        const rawInstruments: Partial<Record<InstrumentCategory, string[]>> =
+        const rawInstruments: Record<string, string[]> =
             instrumentsJson && typeof instrumentsJson === "object"
-                ? (instrumentsJson as Partial<Record<InstrumentCategory, string[]>>)
+                ? (instrumentsJson as Record<string, string[]>)
                 : {};
         const dependencyRules: DependencyRule[] = Array.isArray(dependencyRulesJson)
             ? (dependencyRulesJson as DependencyRule[])
+            : [];
+        const availableCategories: InstrumentCategoryItem[] = Array.isArray(categoriesJson)
+            ? (categoriesJson as InstrumentCategoryItem[])
+                .filter((item) => item && typeof item.name === "string" && item.name.trim().length > 0)
+                .sort((a, b) => a.order - b.order)
             : [];
         const alwaysCarryInstruments: Song["instruments"] =
             alwaysCarryJson && typeof alwaysCarryJson === "object"
@@ -79,11 +117,17 @@ export const useStore = create<StoreState>((set) => ({
             }
         }
 
-        const categories = Object.fromEntries(
-            INSTRUMENT_CATEGORIES.map((c) => [c, Array.isArray(rawInstruments[c]) ? rawInstruments[c] : []])
-        ) as Record<InstrumentCategory, string[]>;
+        const categories = buildCategoryMap(availableCategories, rawInstruments);
 
-        set({ songs, categories, dependencyRules, alwaysCarryInstruments, loaded: true, instrumentsWithId });
+        set({
+            songs,
+            categories,
+            availableCategories,
+            dependencyRules,
+            alwaysCarryInstruments,
+            loaded: true,
+            instrumentsWithId,
+        });
     },
 
     addSong: async (name, instruments) => {
@@ -131,59 +175,55 @@ export const useStore = create<StoreState>((set) => ({
             body: JSON.stringify({ name, category }),
         });
         if (!res.ok) throw new Error((await res.json()).error);
-        const inst = await res.json();
-        set((s) => ({
-            categories: { ...s.categories, [category]: [...(s.categories[category] ?? []), name] },
-            instrumentsWithId: [...s.instrumentsWithId, inst],
-        }));
+        await useStore.getState().fetchAll();
     },
 
-    updateInstrument: async (id, name, oldName, category) => {
+    updateInstrument: async (id, nextName, nextCategory, prevName, prevCategory) => {
+        const payload: { name?: string; category?: string } = {};
+        if (nextName !== prevName) payload.name = nextName;
+        if (nextCategory !== prevCategory) payload.category = nextCategory;
+
         const res = await fetch(`/api/instruments/${id}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name }),
+            body: JSON.stringify(payload),
         });
         if (!res.ok) throw new Error((await res.json()).error);
-
-        // Refresh songs as they may have been modified server-side
-        const songsRes = await fetch("/api/songs");
-        const songsJson: unknown = await songsRes.json();
-        const songs: Song[] = Array.isArray(songsJson) ? (songsJson as Song[]) : [];
-
-        set((s) => ({
-            categories: {
-                ...s.categories,
-                [category]: s.categories[category].map((n) => (n === oldName ? name : n)),
-            },
-            instrumentsWithId: s.instrumentsWithId.map((i) => (i.id === id ? { ...i, name } : i)),
-            songs,
-        }));
+        await useStore.getState().fetchAll();
     },
 
     deleteInstrument: async (id, name, category) => {
         const res = await fetch(`/api/instruments/${id}`, { method: "DELETE" });
         if (!res.ok) throw new Error((await res.json()).error);
-        // Also refresh songs as they may have been modified server-side
-        const [songsRes, dependencyRulesRes] = await Promise.all([
-            fetch("/api/songs"),
-            fetch("/api/instrument-dependencies"),
-        ]);
-        const songsJson: unknown = await songsRes.json();
-        const dependencyRulesJson: unknown = await dependencyRulesRes.json();
-        const songs: Song[] = Array.isArray(songsJson) ? (songsJson as Song[]) : [];
-        const dependencyRules: DependencyRule[] = Array.isArray(dependencyRulesJson)
-            ? (dependencyRulesJson as DependencyRule[])
-            : [];
-        set((s) => ({
-            categories: {
-                ...s.categories,
-                [category]: s.categories[category].filter((n) => n !== name),
-            },
-            instrumentsWithId: s.instrumentsWithId.filter((i) => i.id !== id),
-            songs,
-            dependencyRules,
-        }));
+        await useStore.getState().fetchAll();
+    },
+
+    addCategory: async (name) => {
+        const res = await fetch("/api/instrument-categories", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error);
+        await useStore.getState().fetchAll();
+    },
+
+    updateCategory: async (id, payload) => {
+        const res = await fetch(`/api/instrument-categories/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error((await res.json()).error);
+        await useStore.getState().fetchAll();
+    },
+
+    deleteCategory: async (id) => {
+        const res = await fetch(`/api/instrument-categories/${id}`, {
+            method: "DELETE",
+        });
+        if (!res.ok) throw new Error((await res.json()).error);
+        await useStore.getState().fetchAll();
     },
 
     addDependencyRule: async (triggerCategory, triggerName, targetCategory, targetName) => {

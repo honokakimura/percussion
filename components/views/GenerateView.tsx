@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { Copy, Check, Music2 } from "lucide-react";
 import { useStore } from "@/store/useStore";
-import { INSTRUMENT_CATEGORIES, TRANSPORT_FOOTER } from "@/types";
+import { TRANSPORT_FOOTER } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -12,7 +12,11 @@ interface GenerateViewProps {
 }
 
 export function GenerateView({ showToast }: GenerateViewProps) {
-    const { songs, categories, alwaysCarryInstruments } = useStore();
+    const { songs, categories, availableCategories, alwaysCarryInstruments } = useStore();
+    const availableCategoryNames = useMemo(
+        () => availableCategories.map((category) => category.name),
+        [availableCategories]
+    );
     const songsList = useMemo(() => (Array.isArray(songs) ? songs : []), [songs]);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [tempOverrides, setTempOverrides] = useState<Record<string, boolean>>({});
@@ -21,13 +25,13 @@ export function GenerateView({ showToast }: GenerateViewProps) {
 
     const baseChecked = useMemo(() => {
         const next: Record<string, boolean> = {};
-        for (const cat of INSTRUMENT_CATEGORIES) {
+        for (const cat of availableCategoryNames) {
             for (const inst of categories[cat] ?? []) {
                 next[`${cat}::${inst}`] = false;
             }
         }
         if (includeAlwaysCarry) {
-            for (const cat of INSTRUMENT_CATEGORIES) {
+            for (const cat of availableCategoryNames) {
                 for (const inst of alwaysCarryInstruments[cat] ?? []) {
                     next[`${cat}::${inst}`] = true;
                 }
@@ -36,14 +40,14 @@ export function GenerateView({ showToast }: GenerateViewProps) {
         for (const id of selectedIds) {
             const song = songsList.find((s) => s.id === id);
             if (!song) continue;
-            for (const cat of INSTRUMENT_CATEGORIES) {
+            for (const cat of availableCategoryNames) {
                 for (const inst of song.instruments[cat] ?? []) {
                     next[`${cat}::${inst}`] = true;
                 }
             }
         }
         return next;
-    }, [alwaysCarryInstruments, categories, includeAlwaysCarry, selectedIds, songsList]);
+    }, [alwaysCarryInstruments, availableCategoryNames, categories, includeAlwaysCarry, selectedIds, songsList]);
 
     const checkedMap = useMemo(
         () => ({ ...baseChecked, ...tempOverrides }),
@@ -69,7 +73,7 @@ export function GenerateView({ showToast }: GenerateViewProps) {
         lines.push(`【対象曲】${selectedNames.join("、")}`);
         lines.push("");
 
-        for (const cat of INSTRUMENT_CATEGORIES) {
+        for (const cat of availableCategoryNames) {
             const items = (categories[cat] ?? []).filter((inst) => checkedMap[`${cat}::${inst}`]);
             if (items.length > 0) {
                 lines.push(`【${cat}】`);
@@ -154,7 +158,7 @@ export function GenerateView({ showToast }: GenerateViewProps) {
                             常時運搬セットを含める
                         </label>
                         <div className="space-y-4">
-                            {INSTRUMENT_CATEGORIES.map((cat) => {
+                            {availableCategoryNames.map((cat) => {
                                 const insts = categories[cat] ?? [];
                                 if (insts.length === 0) return null;
                                 return (

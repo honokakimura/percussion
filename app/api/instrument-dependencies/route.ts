@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { DependencyRule, InstrumentCategory, INSTRUMENT_CATEGORIES } from "@/types";
-
-function isValidCategory(value: string): value is InstrumentCategory {
-    return INSTRUMENT_CATEGORIES.includes(value as InstrumentCategory);
-}
+import { DependencyRule, InstrumentCategory } from "@/types";
 
 export async function GET() {
     try {
@@ -35,7 +31,12 @@ export async function POST(req: NextRequest) {
             targetItems?: string[]; 
         };
 
-        if (!isValidCategory(triggerCategory) || !isValidCategory(targetCategory)) {
+        const [triggerCategoryExists, targetCategoryExists] = await Promise.all([
+            prisma.category.findUnique({ where: { name: triggerCategory } }),
+            prisma.category.findUnique({ where: { name: targetCategory } }),
+        ]);
+
+        if (!triggerCategoryExists || !targetCategoryExists) {
             return NextResponse.json({ error: "カテゴリが不正です" }, { status: 400 });
         }
 

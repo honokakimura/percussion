@@ -5,7 +5,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { InstrumentCategory, INSTRUMENT_CATEGORIES, DependencyRule } from "@/types";
+import { InstrumentCategory, DependencyRule } from "@/types";
 
 interface InstrumentEditModalProps {
     isOpen: boolean;
@@ -13,7 +13,13 @@ interface InstrumentEditModalProps {
     instrumentId: string;
     instrumentName: string;
     instrumentCategory: InstrumentCategory;
-    onUpdate: (id: string, name: string, oldName: string, category: InstrumentCategory) => Promise<void>;
+    onUpdate: (
+        id: string,
+        nextName: string,
+        nextCategory: InstrumentCategory,
+        prevName: string,
+        prevCategory: InstrumentCategory,
+    ) => Promise<void>;
     onAddDependency: (
         triggerCategory: InstrumentCategory,
         triggerName: string,
@@ -22,6 +28,7 @@ interface InstrumentEditModalProps {
     ) => Promise<void>;
     onDeleteDependency: (id: string) => Promise<void>;
     categories: Record<InstrumentCategory, string[]>;
+    availableCategoryNames: InstrumentCategory[];
     allDependencies: DependencyRule[];
     showToast: (msg: string, type?: "success" | "error") => void;
 }
@@ -36,23 +43,35 @@ export function InstrumentEditModal({
     onAddDependency,
     onDeleteDependency,
     categories,
+    availableCategoryNames,
     allDependencies,
     showToast,
 }: InstrumentEditModalProps) {
     const [name, setName] = useState(instrumentName);
+    const [category, setCategory] = useState<InstrumentCategory>(instrumentCategory);
     const [updating, setUpdating] = useState(false);
-    const [targetCategory, setTargetCategory] = useState<InstrumentCategory>(INSTRUMENT_CATEGORIES[0]);
+    const [targetCategory, setTargetCategory] = useState<InstrumentCategory>(availableCategoryNames[0] ?? "");
     const [targetName, setTargetName] = useState("");
     const [addingDependency, setAddingDependency] = useState(false);
     const [deletingDependencyId, setDeletingDependencyId] = useState<string | null>(null);
 
     useEffect(() => {
         setName(instrumentName);
+        setCategory(instrumentCategory);
+        const initialTargetCategory = availableCategoryNames[0] ?? "";
+        setTargetCategory(initialTargetCategory);
+        const nextName = categories[initialTargetCategory]?.[0] ?? "";
+        setTargetName(nextName);
+    }, [isOpen, instrumentName, instrumentCategory, categories, availableCategoryNames]);
+
+    useEffect(() => {
         const targetOpts = categories[targetCategory] ?? [];
         if (targetOpts.length > 0) {
             setTargetName(targetOpts[0]);
+        } else {
+            setTargetName("");
         }
-    }, [isOpen, instrumentName, instrumentCategory, targetCategory, categories]);
+    }, [targetCategory, categories]);
 
     const targetOptions = categories[targetCategory] ?? [];
 
@@ -63,12 +82,14 @@ export function InstrumentEditModal({
             (rule.targetCategory === instrumentCategory && rule.targetName === instrumentName)
     );
 
-    const handleUpdateName = async () => {
-        if (!name.trim() || name === instrumentName) return;
+    const hasChanges = name.trim() !== instrumentName || category !== instrumentCategory;
+
+    const handleUpdateInstrument = async () => {
+        if (!name.trim() || !category || !hasChanges) return;
         setUpdating(true);
         try {
-            await onUpdate(instrumentId, name.trim(), instrumentName, instrumentCategory);
-            showToast("楽器名を更新しました");
+            await onUpdate(instrumentId, name.trim(), category, instrumentName, instrumentCategory);
+            showToast("楽器を更新しました");
             onClose();
         } catch (e) {
             showToast((e as Error).message, "error");
@@ -85,7 +106,7 @@ export function InstrumentEditModal({
         }
         setAddingDependency(true);
         try {
-            await onAddDependency(instrumentCategory, name.trim(), targetCategory, targetName);
+            await onAddDependency(instrumentCategory, instrumentName, targetCategory, targetName);
             showToast("連動ルールを追加しました");
         } catch (e) {
             showToast((e as Error).message, "error");
@@ -118,20 +139,34 @@ export function InstrumentEditModal({
                 {/* 楽器名編集 */}
                 <Card className="bg-zinc-50 border-zinc-200">
                     <CardHeader>
-                        <CardTitle className="text-base">楽器名</CardTitle>
+                        <CardTitle className="text-base">楽器情報</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
+                        <div className="space-y-2">
+                            <label className="block text-xs font-medium text-zinc-600">カテゴリ</label>
+                            <select
+                                value={category}
+                                onChange={(e) => setCategory(e.target.value as InstrumentCategory)}
+                                className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
+                            >
+                                {availableCategoryNames.map((cat) => (
+                                    <option key={cat} value={cat}>
+                                        {cat}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                         <div className="flex gap-2">
                             <Input
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleUpdateName()}
+                                onKeyDown={(e) => e.key === "Enter" && handleUpdateInstrument()}
                                 placeholder="楽器名"
                                 className="flex-1"
                             />
                             <Button
-                                onClick={handleUpdateName}
-                                disabled={updating || !name.trim() || name === instrumentName}
+                                onClick={handleUpdateInstrument}
+                                disabled={updating || !name.trim() || !category || !hasChanges}
                             >
                                 {updating ? "更新中..." : "変更"}
                             </Button>
@@ -154,7 +189,7 @@ export function InstrumentEditModal({
                                     onChange={(e) => updateTargetCategory(e.target.value as InstrumentCategory)}
                                     className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
                                 >
-                                    {INSTRUMENT_CATEGORIES.map((cat) => (
+                                    {availableCategoryNames.map((cat) => (
                                         <option key={cat} value={cat}>
                                             {cat}
                                         </option>

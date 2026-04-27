@@ -1,11 +1,13 @@
-export type InstrumentCategory =
-  | "楽器類"
-  | "小物(バッグ)"
-  | "ドラムセット"
-  | "スタンドケース"
-  | "その他";
+export type InstrumentCategory = string;
 
-export const INSTRUMENT_CATEGORIES: InstrumentCategory[] = [
+export interface InstrumentCategoryItem {
+  id: string;
+  name: string;
+  order: number;
+}
+
+// 初期seed用のデフォルトカテゴリ
+export const DEFAULT_INSTRUMENT_CATEGORIES: InstrumentCategory[] = [
   "楽器類",
   "小物(バッグ)",
   "ドラムセット",
@@ -30,6 +32,7 @@ export interface DependencyRule {
 
 export interface AppState {
   categories: Record<InstrumentCategory, string[]>;
+  availableCategories: InstrumentCategoryItem[];
   songs: Song[];
 }
 

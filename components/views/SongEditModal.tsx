@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
-import { Song, InstrumentCategory, INSTRUMENT_CATEGORIES } from "@/types";
+import { Song, InstrumentCategory } from "@/types";
 import { useStore } from "@/store/useStore";
+import { BULK_SELECT_CATEGORY_NAME } from "@/lib/constants";
 
 interface SongEditModalProps {
     isOpen: boolean;
@@ -12,11 +13,12 @@ interface SongEditModalProps {
 }
 
 function buildInitialChecked(
+    availableCategoryNames: InstrumentCategory[],
     categories: ReturnType<typeof useStore.getState>["categories"],
     song?: Song | null
 ) {
     const initial: Record<string, boolean> = {};
-    for (const cat of INSTRUMENT_CATEGORIES) {
+    for (const cat of availableCategoryNames) {
         for (const inst of categories[cat] ?? []) {
             initial[`${cat}::${inst}`] = song?.instruments[cat]?.includes(inst) ?? false;
         }
@@ -25,16 +27,17 @@ function buildInitialChecked(
 }
 
 interface SongEditModalBodyProps {
+    availableCategoryNames: InstrumentCategory[];
     categories: ReturnType<typeof useStore.getState>["categories"];
     song?: Song | null;
     onClose: () => void;
     onSave: (name: string, instruments: Song["instruments"]) => Promise<void>;
 }
 
-function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalBodyProps) {
+function SongEditModalBody({ availableCategoryNames, categories, song, onClose, onSave }: SongEditModalBodyProps) {
     const [name, setName] = useState(() => song?.name ?? "");
     const [checked, setChecked] = useState<Record<string, boolean>>(() =>
-        buildInitialChecked(categories, song)
+        buildInitialChecked(availableCategoryNames, categories, song)
     );
     const [saving, setSaving] = useState(false);
     const dependencyRules = useStore((s) => s.dependencyRules);
@@ -75,12 +78,13 @@ function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalB
     };
 
     const toggleAllDrumSet = (value: boolean) => {
+        const categoryName = BULK_SELECT_CATEGORY_NAME;
         setChecked((prev) => {
             const next = { ...prev };
-            for (const inst of categories["ドラムセット"] ?? []) {
-                next[`ドラムセット::${inst}`] = value;
+            for (const inst of categories[categoryName] ?? []) {
+                next[`${categoryName}::${inst}`] = value;
                 if (value) {
-                    applyDependencyRules(next, "ドラムセット", inst);
+                    applyDependencyRules(next, categoryName, inst);
                 }
             }
             return next;
@@ -91,7 +95,7 @@ function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalB
         if (!name.trim()) return;
         setSaving(true);
         const instruments: Song["instruments"] = {};
-        for (const cat of INSTRUMENT_CATEGORIES) {
+        for (const cat of availableCategoryNames) {
             const selected = (categories[cat] ?? []).filter((inst) => checked[`${cat}::${inst}`]);
             if (selected.length > 0) instruments[cat] = selected;
         }
@@ -118,10 +122,10 @@ function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalB
                 />
             </div>
 
-            {INSTRUMENT_CATEGORIES.map((cat) => {
+            {availableCategoryNames.map((cat) => {
                 const insts = categories[cat] ?? [];
                 if (insts.length === 0) return null;
-                const isDrumSet = cat === "ドラムセット";
+                const isDrumSet = cat === BULK_SELECT_CATEGORY_NAME;
                 return (
                     <div key={cat}>
                         <div className="flex items-center justify-between mb-2">
@@ -200,8 +204,9 @@ function SongEditModalBody({ categories, song, onClose, onSave }: SongEditModalB
 
 export function SongEditModal({ isOpen, onClose, song, onSave }: SongEditModalProps) {
     const categories = useStore((s) => s.categories);
+    const availableCategoryNames = useStore((s) => s.availableCategories.map((category) => category.name));
     const dependencyRules = useStore((s) => s.dependencyRules);
-    const categoriesKey = INSTRUMENT_CATEGORIES
+    const categoriesKey = availableCategoryNames
         .map((cat) => `${cat}:${(categories[cat] ?? []).join("|")}`)
         .join("::");
     const dependencyRulesKey = dependencyRules
@@ -212,6 +217,7 @@ export function SongEditModal({ isOpen, onClose, song, onSave }: SongEditModalPr
         <Modal isOpen={isOpen} onClose={onClose} title={song ? "曲を編集" : "曲を追加"} wide>
             <SongEditModalBody
                 key={`${song?.id ?? "new"}::${categoriesKey}::${dependencyRulesKey}`}
+                availableCategoryNames={availableCategoryNames}
                 categories={categories}
                 song={song}
                 onClose={onClose}

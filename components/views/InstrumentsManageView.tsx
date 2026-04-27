@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { Plus, Trash2, Edit2, ChevronDown, ChevronRight } from "lucide-react";
 import { useStore } from "@/store/useStore";
-import { InstrumentCategory, INSTRUMENT_CATEGORIES } from "@/types";
+import { InstrumentCategory } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,34 +16,48 @@ interface InstrumentsManageViewProps {
 export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps) {
     const {
         categories,
+        availableCategories,
         instrumentsWithId,
         dependencyRules,
         alwaysCarryInstruments,
         addInstrument,
         updateInstrument,
         deleteInstrument,
+        addCategory,
+        updateCategory,
+        deleteCategory,
         addDependencyRule,
         deleteDependencyRule,
         updateAlwaysCarryInstruments,
     } = useStore();
+
+    const availableCategoryNames = useMemo(
+        () => availableCategories.map((category) => category.name),
+        [availableCategories]
+    );
+
     const [newName, setNewName] = useState("");
-    const [newCategory, setNewCategory] = useState<InstrumentCategory>(INSTRUMENT_CATEGORIES[0]);
+    const [newCategory, setNewCategory] = useState<InstrumentCategory>("");
     const [adding, setAdding] = useState(false);
-    const [triggerCategory, setTriggerCategory] = useState<InstrumentCategory>(INSTRUMENT_CATEGORIES[0]);
+    const [triggerCategory, setTriggerCategory] = useState<InstrumentCategory>("");
     const [triggerName, setTriggerName] = useState("");
-    const [targetCategory, setTargetCategory] = useState<InstrumentCategory>(INSTRUMENT_CATEGORIES[0]);
+    const [targetCategory, setTargetCategory] = useState<InstrumentCategory>("");
     const [targetName, setTargetName] = useState("");
     const [savingRule, setSavingRule] = useState(false);
     const [savingAlwaysCarry, setSavingAlwaysCarry] = useState(false);
     const [alwaysCarryOverrides, setAlwaysCarryOverrides] = useState<Record<string, boolean>>({});
+    const [newCategoryName, setNewCategoryName] = useState("");
+    const [addingCategory, setAddingCategory] = useState(false);
+    const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+    const [editingCategoryName, setEditingCategoryName] = useState("");
+    const [savingCategoryId, setSavingCategoryId] = useState<string | null>(null);
+    const [deletingCategoryId, setDeletingCategoryId] = useState<string | null>(null);
 
     // 折りたたみ状態（楽器カテゴリ以外はデフォルト非表示）
     const [addOpen, setAddOpen] = useState(false);
     const [alwaysCarryOpen, setAlwaysCarryOpen] = useState(false);
     const [dependencyOpen, setDependencyOpen] = useState(false);
-    const [categoryOpen, setCategoryOpen] = useState<Record<string, boolean>>(
-        () => Object.fromEntries(INSTRUMENT_CATEGORIES.map((cat) => [cat, true]))
-    );
+    const [categoryOpen, setCategoryOpen] = useState<Record<string, boolean>>({});
 
     // Edit modal state
     const [editModalOpen, setEditModalOpen] = useState(false);
@@ -55,8 +69,12 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
     const [deletingInstrumentId, setDeletingInstrumentId] = useState<string | null>(null);
     const [deletingRuleId, setDeletingRuleId] = useState<string | null>(null);
 
-    const triggerOptions = useMemo(() => categories[triggerCategory] ?? [], [categories, triggerCategory]);
-    const targetOptions = useMemo(() => categories[targetCategory] ?? [], [categories, targetCategory]);
+    const selectedNewCategory = newCategory || availableCategoryNames[0] || "";
+    const selectedTriggerCategory = triggerCategory || availableCategoryNames[0] || "";
+    const selectedTargetCategory = targetCategory || availableCategoryNames[0] || "";
+
+    const triggerOptions = useMemo(() => categories[selectedTriggerCategory] ?? [], [categories, selectedTriggerCategory]);
+    const targetOptions = useMemo(() => categories[selectedTargetCategory] ?? [], [categories, selectedTargetCategory]);
 
     const dependencySummary = useMemo(
         () =>
@@ -69,18 +87,18 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
 
     const alwaysCarryBase = useMemo(() => {
         const base: Record<string, boolean> = {};
-        for (const cat of INSTRUMENT_CATEGORIES) {
+        for (const cat of availableCategoryNames) {
             for (const inst of categories[cat] ?? []) {
                 base[`${cat}::${inst}`] = false;
             }
         }
-        for (const cat of INSTRUMENT_CATEGORIES) {
+        for (const cat of availableCategoryNames) {
             for (const inst of alwaysCarryInstruments[cat] ?? []) {
                 base[`${cat}::${inst}`] = true;
             }
         }
         return base;
-    }, [alwaysCarryInstruments, categories]);
+    }, [alwaysCarryInstruments, categories, availableCategoryNames]);
 
     const alwaysCarryChecked = useMemo(
         () => ({ ...alwaysCarryBase, ...alwaysCarryOverrides }),
@@ -88,16 +106,69 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
     );
 
     const handleAdd = async () => {
-        if (!newName.trim()) return;
+        if (!newName.trim() || !selectedNewCategory) return;
         setAdding(true);
         try {
-            await addInstrument(newName.trim(), newCategory);
+            await addInstrument(newName.trim(), selectedNewCategory);
             showToast("楽器を追加しました");
             setNewName("");
         } catch (e) {
             showToast((e as Error).message, "error");
         } finally {
             setAdding(false);
+        }
+    };
+
+    const handleAddCategory = async () => {
+        if (!newCategoryName.trim()) return;
+        setAddingCategory(true);
+        try {
+            await addCategory(newCategoryName.trim());
+            setNewCategoryName("");
+            showToast("カテゴリを追加しました");
+        } catch (e) {
+            showToast((e as Error).message, "error");
+        } finally {
+            setAddingCategory(false);
+        }
+    };
+
+    const handleUpdateCategory = async (id: string) => {
+        if (!editingCategoryName.trim()) return;
+        setSavingCategoryId(id);
+        try {
+            await updateCategory(id, { name: editingCategoryName.trim() });
+            setEditingCategoryId(null);
+            setEditingCategoryName("");
+            showToast("カテゴリ名を更新しました");
+        } catch (e) {
+            showToast((e as Error).message, "error");
+        } finally {
+            setSavingCategoryId(null);
+        }
+    };
+
+    const handleMoveCategory = async (id: string, nextOrder: number) => {
+        setSavingCategoryId(id);
+        try {
+            await updateCategory(id, { order: nextOrder });
+        } catch (e) {
+            showToast((e as Error).message, "error");
+        } finally {
+            setSavingCategoryId(null);
+        }
+    };
+
+    const handleDeleteCategory = async (id: string, name: string) => {
+        if (!window.confirm(`カテゴリ「${name}」を削除しますか？`)) return;
+        setDeletingCategoryId(id);
+        try {
+            await deleteCategory(id);
+            showToast("カテゴリを削除しました");
+        } catch (e) {
+            showToast((e as Error).message, "error");
+        } finally {
+            setDeletingCategoryId(null);
         }
     };
 
@@ -122,14 +193,19 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
     };
 
     const handleAddDependencyRule = async () => {
-        if (!selectedTriggerName || !selectedTargetName) return;
-        if (triggerCategory === targetCategory && selectedTriggerName === selectedTargetName) {
+        if (!selectedTriggerCategory || !selectedTargetCategory || !selectedTriggerName || !selectedTargetName) return;
+        if (selectedTriggerCategory === selectedTargetCategory && selectedTriggerName === selectedTargetName) {
             showToast("同じ楽器同士の連動は設定できません", "error");
             return;
         }
         setSavingRule(true);
         try {
-            await addDependencyRule(triggerCategory, selectedTriggerName, targetCategory, selectedTargetName);
+            await addDependencyRule(
+                selectedTriggerCategory,
+                selectedTriggerName,
+                selectedTargetCategory,
+                selectedTargetName,
+            );
             showToast("連動ルールを追加しました");
         } catch (e) {
             showToast((e as Error).message, "error");
@@ -167,7 +243,7 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
 
     const handleSaveAlwaysCarry = async () => {
         const instruments: Partial<Record<InstrumentCategory, string[]>> = {};
-        for (const cat of INSTRUMENT_CATEGORIES) {
+        for (const cat of availableCategoryNames) {
             const selected = (categories[cat] ?? []).filter((inst) => alwaysCarryChecked[`${cat}::${inst}`]);
             if (selected.length > 0) instruments[cat] = selected;
         }
@@ -209,10 +285,106 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                     onAddDependency={addDependencyRule}
                     onDeleteDependency={deleteDependencyRule}
                     categories={categories}
+                    availableCategoryNames={availableCategoryNames}
                     allDependencies={dependencyRules}
                     showToast={showToast}
                 />
             )}
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>カテゴリ管理</CardTitle>
+                    <CardDescription>追加・名称変更・並び替え・削除</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    <div className="flex gap-2">
+                        <Input
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+                            placeholder="新しいカテゴリ名"
+                            className="flex-1"
+                        />
+                        <Button
+                            onClick={handleAddCategory}
+                            disabled={addingCategory || !newCategoryName.trim()}
+                        >
+                            {addingCategory ? "追加中..." : "追加"}
+                        </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                        {availableCategories.map((cat, index) => {
+                            const isEditing = editingCategoryId === cat.id;
+                            return (
+                                <div
+                                    key={cat.id}
+                                    className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2"
+                                >
+                                    {isEditing ? (
+                                        <Input
+                                            value={editingCategoryName}
+                                            onChange={(e) => setEditingCategoryName(e.target.value)}
+                                            className="h-9"
+                                        />
+                                    ) : (
+                                        <p className="flex-1 text-sm text-zinc-900">{cat.name}</p>
+                                    )}
+
+                                    <Button
+                                        onClick={() => handleMoveCategory(cat.id, index - 1)}
+                                        disabled={index === 0 || savingCategoryId === cat.id}
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-zinc-500 hover:text-zinc-900"
+                                    >
+                                        ↑
+                                    </Button>
+                                    <Button
+                                        onClick={() => handleMoveCategory(cat.id, index + 1)}
+                                        disabled={index === availableCategories.length - 1 || savingCategoryId === cat.id}
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-zinc-500 hover:text-zinc-900"
+                                    >
+                                        ↓
+                                    </Button>
+                                    {isEditing ? (
+                                        <Button
+                                            onClick={() => handleUpdateCategory(cat.id)}
+                                            disabled={savingCategoryId === cat.id || !editingCategoryName.trim()}
+                                            size="sm"
+                                        >
+                                            保存
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={() => {
+                                                setEditingCategoryId(cat.id);
+                                                setEditingCategoryName(cat.name);
+                                            }}
+                                            variant="ghost"
+                                            size="icon"
+                                            className="text-zinc-500 hover:text-blue-600 hover:bg-blue-50"
+                                        >
+                                            <Edit2 size={14} />
+                                        </Button>
+                                    )}
+                                    <Button
+                                        onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                                        disabled={deletingCategoryId === cat.id}
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-zinc-500 hover:text-red-600 hover:bg-red-50"
+                                    >
+                                        <Trash2 size={14} />
+                                    </Button>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* 楽器を追加（デフォルト閉じ） */}
             <Card>
@@ -233,11 +405,11 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                     <CardContent>
                         <div className="flex gap-2 flex-wrap sm:flex-nowrap">
                             <select
-                                value={newCategory}
+                                value={selectedNewCategory}
                                 onChange={(e) => setNewCategory(e.target.value as InstrumentCategory)}
                                 className="h-10 bg-white border border-zinc-300 rounded-md px-3 py-2 text-sm text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
                             >
-                                {INSTRUMENT_CATEGORIES.map((cat) => (
+                                {availableCategoryNames.map((cat) => (
                                     <option key={cat} value={cat}>{cat}</option>
                                 ))}
                             </select>
@@ -280,7 +452,7 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                 </CardHeader>
                 {alwaysCarryOpen && (
                     <CardContent className="space-y-4">
-                        {INSTRUMENT_CATEGORIES.map((cat) => {
+                        {availableCategoryNames.map((cat) => {
                             const insts = categories[cat] ?? [];
                             if (insts.length === 0) return null;
                             return (
@@ -329,7 +501,7 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
             </Card>
 
             {/* 楽器カテゴリ一覧（デフォルト開き） */}
-            {INSTRUMENT_CATEGORIES.map((cat) => {
+            {availableCategoryNames.map((cat) => {
                 const insts = categories[cat] ?? [];
                 const isOpen = categoryOpen[cat] ?? true;
                 return (
@@ -444,11 +616,11 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                                 <label className="block text-xs font-medium text-zinc-500">きっかけ</label>
                                 <div className="grid gap-2 sm:grid-cols-2">
                                     <select
-                                        value={triggerCategory}
+                                        value={selectedTriggerCategory}
                                         onChange={(e) => updateTriggerCategory(e.target.value as InstrumentCategory)}
                                         className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
                                     >
-                                        {INSTRUMENT_CATEGORIES.map((cat) => (
+                                        {availableCategoryNames.map((cat) => (
                                             <option key={cat} value={cat}>{cat}</option>
                                         ))}
                                     </select>
@@ -474,11 +646,11 @@ export function InstrumentsManageView({ showToast }: InstrumentsManageViewProps)
                                 <label className="block text-xs font-medium text-zinc-500">自動で選ばれる</label>
                                 <div className="grid gap-2 sm:grid-cols-2">
                                     <select
-                                        value={targetCategory}
+                                        value={selectedTargetCategory}
                                         onChange={(e) => updateTargetCategory(e.target.value as InstrumentCategory)}
                                         className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-300"
                                     >
-                                        {INSTRUMENT_CATEGORIES.map((cat) => (
+                                        {availableCategoryNames.map((cat) => (
                                             <option key={cat} value={cat}>{cat}</option>
                                         ))}
                                     </select>

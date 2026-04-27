@@ -38,6 +38,10 @@ export async function POST(req: NextRequest) {
         if (!name?.trim() || !category) {
             return NextResponse.json({ error: "名前とカテゴリは必須です" }, { status: 400 });
         }
+        const categoryExists = await prisma.category.findUnique({ where: { name: category } });
+        if (!categoryExists) {
+            return NextResponse.json({ error: "カテゴリが不正です" }, { status: 400 });
+        }
         // Check duplicate
         const existing = await prisma.instrument.findUnique({
             where: { name_category: { name: name.trim(), category } },
